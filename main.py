@@ -1,12 +1,18 @@
 import streamlit as st
 import yaml
 import time
+import rclpy
+from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import NavigateToPose
 
 st.set_page_config(layout="wide")
 
 with open("position.yaml", "r") as file:
     data = yaml.safe_load(file)
 
+# Initialize ROS context if it's not already initialized
+if not rclpy.ok():
+    rclpy.init()
 
 def same_position():
     pass
@@ -14,14 +20,33 @@ def same_position():
 def move_to_goal():
     pass
 
-def button_clicked(key):
+def button_clicked(key, args=None):
     x, y, z = data[key].values()
+    x = float(x.strip().replace(',', ''))
+    y = float(y.strip().replace(',', ''))
+    z = float(z)
+
+    print(type(x), type(y), type(z))
     print(x, y, z)
-    show_message()
 
-def show_message():
-    pass
+    node = rclpy.create_node('move_to_goal')
 
+    goal_publisher = node.create_publisher(PoseStamped, '/goal_pose', 10)
+
+    # 원하는 위치로 이동하기 위한 목표 좌표 설정
+    goal_pose = PoseStamped()
+    goal_pose.pose.position.x = x
+    goal_pose.pose.position.y = y
+    goal_pose.pose.position.z = z
+    goal_pose.pose.orientation.w = 1.0  # 기본 방향으로 설정
+
+    while goal_publisher.get_subscription_count() < 1:
+        rclpy.spin_once(node)
+
+    # 목표 좌표를 게시하여 로봇을 이동시킴
+    goal_publisher.publish(goal_pose)
+
+    node.destroy_node()
 
 def main():
     st.markdown("""
@@ -66,4 +91,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
